@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Profilim | E-Sağlık Platformu</title>
+    <style>
+        /* GENEL AYARLAR */
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* TUTARLI ÜST MENÜ (HEADER) */
+        .top-navbar {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .brand-logo { font-size: 24px; font-weight: 800; color: #2c3e50; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+        .brand-logo span { color: #3498db; font-weight: 600; font-size: 16px; background: #e8f4f8; padding: 4px 10px; border-radius: 12px; margin-left: 10px; }
+        .nav-actions { display: flex; gap: 15px; }
+        .btn-nav { background: #f0f4f8; color: #2c3e50; padding: 10px 20px; border-radius: 25px; text-decoration: none; font-weight: bold; transition: 0.3s; font-size: 14px; border: 1px solid #e1e8ef; }
+        .btn-nav:hover { background: #e1e8ef; }
+        .btn-active { background: #3498db; color: white; border-color: #3498db; box-shadow: 0 5px 15px rgba(52,152,219,0.3); }
+        .btn-active:hover { background: #2980b9; color: white; }
+
+        /* ANA SAYFA DÜZENİ (DASHBOARD GRID) */
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            width: 100%;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 30px;
+            box-sizing: border-box;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* SOL TARAF: KULLANICI PROFİL KARTI */
+        .user-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+            overflow: hidden;
+            height: fit-content;
+            border: 1px solid #e1e8ef;
+        }
+
+        .user-cover {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            height: 120px;
+            width: 100%;
+        }
+
+        .user-avatar-wrapper { text-align: center; margin-top: -50px; }
+        .user-avatar {
+            width: 100px; height: 100px;
+            background: white; color: #2c3e50;
+            border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 36px; font-weight: 800;
+            border: 5px solid white;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .user-info-main { text-align: center; padding: 15px 20px 25px 20px; border-bottom: 1px solid #f0f4f8; }
+        .user-info-main h2 { margin: 0 0 5px 0; color: #2c3e50; font-size: 22px; font-weight: 800; }
+        .badge-role { background: #e8f4f8; color: #3498db; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 12px; display: inline-block; margin-bottom: 5px; }
+        .join-date { color: #95a5a6; font-size: 13px; font-weight: 500; }
+
+        .user-details { padding: 25px 30px; }
+        .detail-group { margin-bottom: 20px; }
+        .detail-group label { display: block; font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.5px; }
+        .detail-group div { font-size: 15px; color: #2c3e50; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+
+        .btn-edit { width: 100%; padding: 14px; background: #f8fafc; color: #3498db; border: 1px solid #e1e8ef; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 14px; }
+        .btn-edit:hover { background: #e1e8ef; color: #2c3e50; }
+
+        .btn-logout { display: flex; justify-content: center; align-items: center; gap: 5px; margin-top: 20px; color: #e74c3c; text-decoration: none; font-size: 14px; font-weight: bold; transition: 0.2s; }
+        .btn-logout:hover { color: #c0392b; text-decoration: underline; }
+
+        /* SAĞ TARAF: RANDEVULAR & İSTATİSTİKLER */
+        .dashboard-content { display: flex; flex-direction: column; gap: 30px; }
+
+        /* Hızlı İstatistikler */
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .stat-box { background: white; padding: 25px; border-radius: 20px; border: 1px solid #e1e8ef; display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.02); }
+        .stat-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .stat-box:nth-child(1) .stat-icon { background: #e8f4f8; color: #3498db; }
+        .stat-box:nth-child(2) .stat-icon { background: #e8f8f5; color: #27ae60; }
+        .stat-box:nth-child(3) .stat-icon { background: #fef9e7; color: #f39c12; }
+        .stat-info h4 { margin: 0; color: #7f8c8d; font-size: 13px; font-weight: 600; text-transform: uppercase; }
+        .stat-info span { font-size: 24px; font-weight: 800; color: #2c3e50; line-height: 1.2; }
+
+        /* Randevu Bölüm Başlıkları */
+        .section-header { font-size: 20px; color: #2c3e50; margin: 10px 0 15px 0; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+
+        /* Aktif Randevu Kartı (Bilet Tarzı) */
+        .appointment-card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center; border: 1px solid #e1e8ef; transition: 0.3s; position: relative; overflow: hidden; }
+        .appointment-card:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(0,0,0,0.08); border-color: #bdc3c7; }
+
+        /* Kartın solundaki renkli vurgu */
+        .card-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; }
+
+        .apt-main { display: flex; gap: 20px; align-items: center; }
+        .apt-icon { font-size: 35px; background: #f8fafc; padding: 15px; border-radius: 15px; border: 1px solid #e1e8ef; }
+
+        .apt-details h3 { margin: 0 0 5px 0; color: #2c3e50; font-size: 18px; font-weight: 800; }
+        .apt-details p { margin: 0 0 12px 0; color: #7f8c8d; font-size: 14px; font-weight: 500; }
+
+        .apt-tags { display: flex; gap: 10px; }
+        .apt-tag { background: #f0f4f8; padding: 6px 12px; border-radius: 8px; font-size: 13px; color: #2c3e50; font-weight: 700; display: flex; align-items: center; gap: 5px; }
+
+        .apt-actions { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+        .status-badge { display: inline-block; padding: 6px 12px; border-radius: 8px; color: white; font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .btn-join { display: inline-flex; align-items: center; gap: 5px; padding: 10px 20px; background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; text-decoration: none; border-radius: 10px; font-size: 14px; font-weight: bold; transition: 0.3s; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3); }
+        .btn-join:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(39, 174, 96, 0.4); }
+
+        .btn-review { display: inline-flex; padding: 8px 16px; background: white; color: #3498db; border: 1px solid #3498db; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: bold; transition: 0.2s; }
+        .btn-review:hover { background: #3498db; color: white; }
+
+        .empty-state { background: white; padding: 50px; text-align: center; border-radius: 15px; color: #7f8c8d; border: 2px dashed #d1d7dc; font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        .empty-icon { font-size: 40px; color: #bdc3c7; }
+
+    </style>
+</head>
+<body>
+
+<div class="top-navbar">
+    <a href="{% url 'ana_sayfa' %}" class="brand-logo">🏥 E-Sağlık<span>Danışan</span></a>
+    <div class="nav-actions">
+        <a href="{% url 'ana_sayfa' %}" class="btn-nav">← Ana Sayfa</a>
+        <a href="#" class="btn-nav btn-active">👤 Profilim</a>
+    </div>
+</div>
+
+<div class="dashboard-container">
+
+    <div class="user-card">
+        <div class="user-cover"></div>
+        <div class="user-avatar-wrapper">
+            <div class="user-avatar">{{ kullanici.ad_soyad|slice:":1" }}</div>
+        </div>
+
+        <div class="user-info-main">
+            <h2>{{ kullanici.ad_soyad }}</h2>
+            <div class="badge-role">Onaylı Danışan</div>
+            <div class="join-date">Platforma Katılım: {{ kullanici.kayit_tarihi }}</div>
+        </div>
+
+        <div class="user-details">
+            <div class="detail-group">
+                <label>E-Posta Adresi</label>
+                <div>✉️ {{ kullanici.email }}</div>
+            </div>
+            <div class="detail-group">
+                <label>Telefon Numarası</label>
+                <div>📱 {{ kullanici.telefon }}</div>
+            </div>
+
+            <button class="btn-edit">Kişisel Bilgileri Düzenle</button>
+            <a href="{% url 'giris' %}" class="btn-logout">🚪 Hesaptan Çıkış Yap</a>
+        </div>
+    </div>
+
+    <div class="dashboard-content">
+
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-icon">📅</div>
+                <div class="stat-info">
+                    <h4>Aktif Randevu</h4>
+                    <span>{{ yaklasan_randevular|length }}</span>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon">💬</div>
+                <div class="stat-info">
+                    <h4>Geçmiş Görüşme</h4>
+                    <span>{{ gecmis_randevular|length }}</span>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon">💳</div>
+                <div class="stat-info">
+                    <h4>Cüzdan Bakiyesi</h4>
+                    <span>0,00 TL</span>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <h2 class="section-header">🟢 Yaklaşan Randevularınız</h2>
+
+            {% for randevu in yaklasan_randevular %}
+            <div class="appointment-card">
+                <div class="card-accent" style="background-color: {{ randevu.durum_renk }};"></div>
+                <div class="apt-main">
+                    <div class="apt-icon">👨‍⚕️</div>
+                    <div class="apt-details">
+                        <h3>{{ randevu.doktor }}</h3>
+                        <p>{{ randevu.bolum }} Uzmanı</p>
+                        <div class="apt-tags">
+                            <span class="apt-tag">📅 {{ randevu.tarih }}</span>
+                            <span class="apt-tag">⏰ {{ randevu.saat }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="apt-actions">
+                    <div class="status-badge" style="background-color: {{ randevu.durum_renk }};">
+                        {{ randevu.durum }}
+                    </div>
+                    <a href="{% url 'ana_sayfa' %}" class="btn-join">📹 Odaya Bağlan</a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state">
+                <div class="empty-icon">📂</div>
+                <div>Yaklaşan herhangi bir randevunuz bulunmamaktadır.</div>
+                <a href="{% url 'ana_sayfa' %}" class="btn-nav btn-active" style="display:inline-block;">Uzman Ara</a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="margin-top: 10px;">
+            <h2 class="section-header">🕒 Geçmiş Randevular</h2>
+
+            {% for randevu in gecmis_randevular %}
+            <div class="appointment-card" style="background: #fafbfc; opacity: 0.9;">
+                <div class="card-accent" style="background-color: {{ randevu.durum_renk }};"></div>
+                <div class="apt-main">
+                    <div class="apt-icon" style="filter: grayscale(100%);">👨‍⚕️</div>
+                    <div class="apt-details">
+                        <h3 style="color:#5c6a79;">{{ randevu.doktor }}</h3>
+                        <p>{{ randevu.bolum }} Uzmanı</p>
+                        <div class="apt-tags">
+                            <span class="apt-tag" style="background: white; border: 1px solid #e1e8ef;">📅 {{ randevu.tarih }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="apt-actions">
+                    <div class="status-badge" style="background-color: {{ randevu.durum_renk }};">
+                        {{ randevu.durum }}
+                    </div>
+                    {% if randevu.durum == 'Tamamlandı' %}
+                    <a href="#" class="btn-review" onclick="alert('Değerlendirme ekranı yakında eklenecektir.')">⭐ Değerlendir</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state">
+                <div class="empty-icon">📜</div>
+                <div>Geçmiş randevu kaydınız bulunamadı.</div>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>

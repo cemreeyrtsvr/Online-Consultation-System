@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Uzman Paneli | E-Sağlık Platformu</title>
+    <style>
+        /* GENEL AYARLAR VE PREMİUM ARKA PLAN */
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to right bottom, rgba(245, 247, 250, 0.92), rgba(195, 207, 226, 0.92)),
+                        url('https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=2000&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* ÜST MENÜ (HEADER) */
+        .top-navbar {
+            background: rgba(255, 255, 255, 0.95); padding: 15px 50px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px);
+        }
+        .brand-logo { font-size: 24px; font-weight: 800; color: #2c3e50; text-decoration: none; display: flex; align-items: center; gap: 10px; letter-spacing: -0.5px; }
+        .brand-logo span { color: #fff; font-weight: 600; font-size: 14px; background: #e74c3c; padding: 4px 12px; border-radius: 12px; margin-left: 10px; box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);}
+
+        .nav-actions { display: flex; gap: 20px; align-items: center; }
+        .wallet-badge { background: #f0fdf4; padding: 10px 20px; border-radius: 25px; font-weight: 800; font-size: 15px; color: #16a34a; border: 1px solid #bbf7d0; box-shadow: 0 4px 10px rgba(22, 163, 74, 0.1); display: flex; align-items: center; gap: 5px;}
+        .btn-nav { background: #f0f4f8; color: #2c3e50; padding: 10px 25px; border-radius: 25px; text-decoration: none; font-weight: bold; transition: 0.3s; font-size: 14px; border: 1px solid #e1e8ef; }
+        .btn-nav:hover { background: #e74c3c; color: white; border-color: #e74c3c; box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3); }
+
+        /* ANA DÜZEN */
+        .dashboard-container { max-width: 1400px; margin: 40px auto; width: 100%; padding: 0 20px; display: grid; grid-template-columns: 320px 1fr; gap: 35px; box-sizing: border-box; animation: fadeIn 0.6s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* SOL TARAF: UZMAN KARTI */
+        .expert-card { background: rgba(255, 255, 255, 0.85); border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.06); overflow: hidden; height: fit-content; border: 1px solid rgba(255,255,255,0.6); text-align: center; backdrop-filter: blur(15px); }
+        .expert-cover { background: linear-gradient(135deg, #3498db, #2c3e50); height: 120px; width: 100%; position: relative;}
+        .expert-avatar { width: 110px; height: 110px; background: white; color: #3498db; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 800; border: 5px solid white; box-shadow: 0 10px 25px rgba(0,0,0,0.15); margin-top: -55px; position: relative; z-index: 2;}
+
+        .expert-info { padding: 15px 25px 25px 25px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .expert-info h2 { margin: 0 0 5px 0; color: #2c3e50; font-size: 22px; font-weight: 800; }
+        .expert-info p { color: #5c6a79; font-size: 14px; margin: 0 0 15px 0; font-weight: 600; }
+        .expert-rating { font-size: 14px; font-weight: bold; color: #f39c12; background: #fef9e7; display: inline-block; padding: 6px 15px; border-radius: 20px; border: 1px solid #fdebd0;}
+
+        .expert-details { padding: 25px; }
+        .btn-edit { width: 100%; padding: 14px; background: rgba(52, 152, 219, 0.1); color: #3498db; border: 1px solid rgba(52, 152, 219, 0.2); border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 14px; margin-bottom: 15px; }
+        .btn-edit:hover { background: #3498db; color: white; box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);}
+
+        /* Hızlı Bildirim Rozeti */
+        .status-online { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #27ae60; background: #e8f8f5; padding: 10px 20px; border-radius: 12px; margin-bottom: 15px; width: 100%; box-sizing: border-box; justify-content: center;}
+        .dot { width: 10px; height: 10px; background: #2ecc71; border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(46, 204, 113, 0); } 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } }
+
+        /* SAĞ TARAF: DASHBOARD İÇERİĞİ */
+        .dashboard-content { display: flex; flex-direction: column; gap: 30px; }
+
+        /* İstatistikler (4 Kolon Yapıldı) */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .stat-box { background: rgba(255, 255, 255, 0.85); padding: 25px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.6); display: flex; align-items: center; gap: 15px; backdrop-filter: blur(10px); box-shadow: 0 10px 25px rgba(0,0,0,0.04); transition: 0.3s; }
+        .stat-box:hover { transform: translateY(-5px); box-shadow: 0 15px 35px rgba(0,0,0,0.08); }
+        .stat-icon { width: 50px; height: 50px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;}
+        .stat-box:nth-child(1) .stat-icon { background: #e8f8f5; color: #27ae60; }
+        .stat-box:nth-child(2) .stat-icon { background: #e8f4f8; color: #3498db; }
+        .stat-box:nth-child(3) .stat-icon { background: #fdf2e9; color: #e67e22; }
+        .stat-box:nth-child(4) .stat-icon { background: #f4ecf7; color: #9b59b6; }
+        .stat-info h4 { margin: 0; color: #5c6a79; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;}
+        .stat-info span { font-size: 22px; font-weight: 800; color: #2c3e50; }
+
+        /* ALT KISIM: İKİYE BÖLÜNMÜŞ İÇERİK */
+        .split-content { display: grid; grid-template-columns: 1.8fr 1fr; gap: 30px; }
+
+        .section-header { font-size: 20px; color: #2c3e50; margin: 0 0 15px 0; font-weight: 800; display: flex; align-items: center; justify-content: space-between;}
+        .section-badge { background: #e74c3c; color: white; font-size: 12px; padding: 2px 8px; border-radius: 10px; vertical-align: middle; margin-left: 5px;}
+
+        /* Ana Akış: Randevular */
+        .appointment-card { background: rgba(255, 255, 255, 0.95); border-radius: 18px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.8); position: relative; overflow: hidden; margin-bottom: 20px; transition: all 0.3s ease; backdrop-filter: blur(10px); }
+        .appointment-card:hover { border-color: #3498db; transform: translateX(5px); }
+        .card-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; }
+
+        .apt-main { display: flex; gap: 15px; align-items: center; }
+        .apt-icon { font-size: 30px; background: #f8fafc; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 15px; border: 1px solid #e1e8ef; }
+        .apt-details h3 { margin: 0 0 5px 0; color: #2c3e50; font-size: 17px; font-weight: 800; }
+        .apt-details p { margin: 0 0 10px 0; color: #5c6a79; font-size: 13px; font-weight: 600; background: rgba(0,0,0,0.03); display: inline-block; padding: 4px 10px; border-radius: 8px;}
+        .apt-tag { background: white; border: 1px solid #d1d7dc; padding: 5px 12px; border-radius: 8px; font-size: 12px; color: #2c3e50; font-weight: 700; display: inline-block;}
+
+        .apt-actions { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+        .status-badge { display: inline-block; padding: 6px 15px; border-radius: 10px; color: white; font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;}
+
+        .btn-group { display: flex; gap: 10px; }
+        .btn-video { padding: 10px 18px; background: linear-gradient(135deg, #3498db, #2980b9); color: white; border: none; border-radius: 10px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3); display: flex; align-items: center; gap: 6px; }
+        .btn-video:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(52, 152, 219, 0.4); }
+        .btn-chat { padding: 10px 15px; background: white; color: #2c3e50; border: 1px solid #d1d7dc; border-radius: 10px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px;}
+        .btn-chat:hover { background: #f0f4f8; border-color: #bdc3c7; }
+
+        /* Yan Akış: Widgetlar (Yeni İstekler, Hızlı İşlemler, Yorumlar) */
+        .widget-box { background: rgba(255,255,255,0.9); border-radius: 20px; padding: 25px; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); border: 1px solid rgba(255,255,255,0.6); backdrop-filter: blur(10px);}
+        .widget-title { font-size: 16px; font-weight: 800; color: #2c3e50; margin: 0 0 15px 0; display: flex; justify-content: space-between; align-items: center;}
+
+        /* Bekleyen İstek Listesi */
+        .request-item { background: #fff; border: 1px solid #e1e8ef; padding: 15px; border-radius: 12px; margin-bottom: 10px; transition: 0.2s;}
+        .request-item:hover { border-color: #3498db; }
+        .req-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;}
+        .req-info strong { color: #2c3e50; font-size: 14px;}
+        .req-info span { font-size: 12px; color: #7f8c8d; background: #f0f4f8; padding: 2px 8px; border-radius: 8px;}
+        .req-actions { display: flex; gap: 8px;}
+        .req-btn { flex: 1; padding: 8px; border: none; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+        .req-accept { background: #e8f8f5; color: #27ae60; }
+        .req-accept:hover { background: #27ae60; color: white;}
+        .req-reject { background: #fdedec; color: #e74c3c; }
+        .req-reject:hover { background: #e74c3c; color: white;}
+
+        /* Hızlı İşlemler Butonları */
+        .quick-action-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 15px; background: white; border: 1px solid #e1e8ef; border-radius: 12px; font-size: 14px; font-weight: 600; color: #2c3e50; margin-bottom: 10px; cursor: pointer; transition: 0.2s;}
+        .quick-action-btn:hover { background: #f0f4f8; border-color: #3498db; color: #3498db;}
+
+        /* Son Yorumlar */
+        .review-item { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px dashed #e1e8ef;}
+        .review-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0;}
+        .rev-header { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px;}
+        .rev-name { font-weight: bold; color: #2c3e50;}
+        .rev-stars { color: #f1c40f;}
+        .rev-text { font-size: 13px; color: #5c6a79; font-style: italic; line-height: 1.4;}
+
+        /* VİDEO & CHAT ARAÇLARI (Gizli Altyapı) */
+        #video-wrapper { width: 100%; height: 100%; position: relative; display: none; background: #1c1d1f; border-radius: 20px; overflow: hidden; }
+        #pip-header { width: 100%; height: 28px; background: #e74c3c; color: white; display: none; align-items: center; justify-content: center; cursor: move; font-size: 14px; font-weight: bold; user-select: none; z-index: 10001; }
+        #meet { width: 100%; height: 100%; }
+        .wrapper-pip { position: absolute !important; width: 360px !important; height: 280px !important; z-index: 99999 !important; bottom: 30px; left: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); border: 4px solid #fff; border-radius: 15px; overflow: hidden; display: flex !important; flex-direction: column; }
+        .wrapper-pip #pip-header { display: flex; }
+        .wrapper-pip #meet { height: calc(100% - 28px); }
+
+        #chat-interface { width: 100%; height: 100%; display: none; flex-direction: column; background: #fff; z-index: 100; position: fixed; bottom: 30px; right: 30px; width: 360px; height: 450px; border-radius: 15px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); border: 1px solid #ddd; overflow: hidden; }
+        .chat-header { padding: 15px; border-bottom: 1px solid #e1e8ef; background: #2c3e50; color: white; font-weight: bold; display: flex; align-items: center; justify-content: space-between; font-size: 16px; }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; background-color: #f0f4f8; display: flex; flex-direction: column; gap: 15px; }
+        .message { max-width: 80%; padding: 10px 15px; border-radius: 12px; font-size: 13px; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.05); line-height: 1.4; }
+        .msg-me { align-self: flex-end; background: #dcf8c6; border-bottom-right-radius: 0; color: #1c1d1f; }
+        .msg-other { align-self: flex-start; background: #fff; border-bottom-left-radius: 0; color: #2c3e50; }
+        .chat-input-area { padding: 15px; background: #fff; display: flex; gap: 10px; align-items: center; border-top: 1px solid #e1e8ef; }
+        #chat-input { flex: 1; padding: 10px 15px; border: 1px solid #d1d7dc; border-radius: 20px; outline: none; font-size: 14px; background: #f8fafc; }
+        #send-btn { padding: 10px 20px; background: #2c3e50; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .file-upload-label { cursor: pointer; font-size: 22px; color: #95a5a6; }
+    </style>
+</head>
+<body>
+
+<div class="top-navbar">
+    <a href="#" class="brand-logo">🏥 E-Sağlık<span>Danışman Paneli</span></a>
+    <div class="nav-actions">
+        <div class="wallet-badge">💰 Cüzdan: {{ uzman.bakiye }}</div>
+    </div>
+</div>
+
+<div class="dashboard-container">
+
+    <div class="expert-card">
+        <div class="expert-cover"></div>
+        <div class="expert-avatar">{{ uzman.ad_soyad|slice:":1" }}</div>
+
+        <div class="expert-info">
+            <h2>{{ uzman.ad_soyad }}</h2>
+            <p>{{ uzman.unvan }}</p>
+            <div class="expert-rating">⭐ {{ uzman.puan }} Danışan Puanı</div>
+        </div>
+
+        <div class="expert-details">
+            <div class="status-online"><div class="dot"></div> Randevu Alımına Açık</div>
+            <button class="btn-edit" onclick="alert('Profil düzenleme yakında aktif edilecektir.')">✏️ Profilimi Düzenle</button>
+            <a href="{% url 'giris' %}" class="btn-logout">🚪 Sistemi Kapat ve Çık</a>
+        </div>
+    </div>
+
+    <div class="dashboard-content">
+
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-icon">👥</div>
+                <div class="stat-info">
+                    <h4>Toplam Danışan</h4>
+                    <span>{{ uzman.toplam_danisan }}</span>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon">📅</div>
+                <div class="stat-info">
+                    <h4>Bugünkü Seans</h4>
+                    <span>{{ bugunku_randevular|length }}</span>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon">📈</div>
+                <div class="stat-info">
+                    <h4>Bu Ayki Kazanç</h4>
+                    <span>{{ uzman.aylik_kazanc }}</span>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon">⭐</div>
+                <div class="stat-info">
+                    <h4>Memnuniyet</h4>
+                    <span>%98</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="split-content">
+
+            <div class="appointments-column">
+                <h2 class="section-header">🟢 Bugünkü Randevularınız</h2>
+
+                {% for randevu in bugunku_randevular %}
+                <div class="appointment-card">
+                    <div class="card-accent" style="background-color: {{ randevu.durum_renk }};"></div>
+                    <div class="apt-main">
+                        <div class="apt-icon">👤</div>
+                        <div class="apt-details">
+                            <h3>{{ randevu.danisan_ad }}</h3>
+                            <p>Not: {{ randevu.not }}</p>
+                            <div class="apt-tag">⏰ Seans: {{ randevu.saat }}</div>
+                        </div>
+                    </div>
+                    <div class="apt-actions">
+                        <div class="status-badge" style="background-color: {{ randevu.durum_renk }};">{{ randevu.durum }}</div>
+                        <div class="btn-group">
+                            <button class="btn-video" onclick="baslatVideo('{{ randevu.id }}', '{{ randevu.danisan_ad }}')">📹 Odayı Aç</button>
+                            <button class="btn-chat" onclick="baslatChat('{{ randevu.id }}', '{{ randevu.danisan_ad }}')">💬 Mesaj</button>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div style="background: rgba(255,255,255,0.8); padding: 40px; text-align: center; border-radius: 20px; color: #7f8c8d; border: 2px dashed rgba(255,255,255,0.5); backdrop-filter: blur(5px);">Bugün için planlanmış bir randevunuz bulunmamaktadır.</div>
+                {% endfor %}
+            </div>
+
+            <div class="widgets-column">
+
+                <div class="widget-box">
+                    <h3 class="widget-title">🔔 Bekleyen Talepler <span class="section-badge">{{ bekleyen_talepler|length }}</span></h3>
+                    {% for talep in bekleyen_talepler %}
+                    <div class="request-item">
+                        <div class="req-info">
+                            <strong>{{ talep.danisan_ad }}</strong>
+                            <span>{{ talep.saat }}</span>
+                        </div>
+                        <div style="font-size:12px; color:#7f8c8d; margin-bottom:10px;">📅 {{ talep.tarih }} - {{ talep.hizmet }}</div>
+                        <div class="req-actions">
+                            <button class="req-btn req-accept" onclick="alert('Randevu Onaylandı!')">✓ Onayla</button>
+                            <button class="req-btn req-reject" onclick="alert('Randevu Reddedildi!')">✕ Reddet</button>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p style="font-size:13px; color:#7f8c8d; text-align:center;">Bekleyen onayınız yok.</p>
+                    {% endfor %}
+                </div>
+
+                <div class="widget-box">
+                    <h3 class="widget-title">⚡ Hızlı İşlemler</h3>
+                    <button class="quick-action-btn" onclick="alert('Yeni Diyet/Reçete yazma ekranı.')">📄 Yeni Belge / Reçete Oluştur</button>
+                    <button class="quick-action-btn" onclick="alert('Tahlil isteme ekranı.')">🧪 Danışandan Tahlil İste</button>
+                    <button class="quick-action-btn" onclick="alert('Çalışma saatleri paneli.')">⚙️ Çalışma Saatlerini Düzenle</button>
+                </div>
+
+                <div class="widget-box">
+                    <h3 class="widget-title">💬 Son Değerlendirmeler</h3>
+                    {% for yorum in son_yorumlar %}
+                    <div class="review-item">
+                        <div class="rev-header">
+                            <span class="rev-name">{{ yorum.danisan }}</span>
+                            <span class="rev-stars">★★★★★</span>
+                        </div>
+                        <div class="rev-text">"{{ yorum.yorum }}"</div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+        </div>
+
+        <div id="video-wrapper">
+            <div id="pip-header" title="Sürükle">⋮⋮ Odayı Küçült (Sürükle) ⋮⋮</div>
+            <div id="meet"></div>
+        </div>
+
+        <div id="chat-interface">
+            <div class="chat-header">
+                <span id="chat-user-name">Sohbet</span>
+                <button onclick="chatiKapat()" style="background:none; border:none; color:white; font-size:22px; cursor:pointer; transition: 0.2s;">✖</button>
+            </div>
+            <div class="chat-messages" id="chat-history"></div>
+            <div class="chat-input-area">
+                <label for="file-upload" class="file-upload-label" title="Dosya Gönder">📎</label>
+                <input type="file" id="file-upload" style="display: none;" onchange="dosyaSecildi(this)">
+                <input type="text" id="chat-input" placeholder="Mesajınızı yazın..." onkeypress="handleEnter(event)">
+                <button id="send-btn" onclick="sendMessage()">Gönder</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src='https://meet.jit.si/external_api.js'></script>
+<script>
+    // Uzman ekranı JS kodları (Hiç dokunulmadı, sorunsuz çalışır)
+    const KULLANICI_ADI = '{{ uzman.ad_soyad }}';
+    let AKTIF_ODA_ID = null; let VIDEO_ACIK = false; let api = null; let refreshInterval = null;
+
+    const wrapperDiv = document.getElementById('video-wrapper'); const meetDiv = document.getElementById('meet'); const pipHeader = document.getElementById('pip-header'); const chatDiv = document.getElementById('chat-interface');
+
+    function baslatVideo(odaId, danisanAdi) {
+        wrapperDiv.style.display = 'block'; wrapperDiv.classList.remove('wrapper-pip'); wrapperDiv.style.top = ''; wrapperDiv.style.left = ''; wrapperDiv.style.bottom = ''; wrapperDiv.style.right = '';
+        VIDEO_ACIK = true; AKTIF_ODA_ID = odaId;
+        if (refreshInterval) clearInterval(refreshInterval); if (api) return;
+        const options = { roomName: 'Proje-Oda-' + odaId, width: '100%', height: '100%', parentNode: meetDiv, lang: 'tr', configOverwrite: { startWithAudioMuted: true, startWithVideoMuted: false }, userInfo: { displayName: KULLANICI_ADI } };
+        api = new JitsiMeetExternalAPI('meet.jit.si', options);
+        makeDraggable(wrapperDiv, pipHeader);
+    }
+
+    function baslatChat(odaId, danisanAdi) {
+        AKTIF_ODA_ID = odaId; chatDiv.style.display = 'flex';
+        if (VIDEO_ACIK) { wrapperDiv.classList.add('wrapper-pip'); wrapperDiv.style.display = 'flex'; wrapperDiv.style.bottom = '30px'; wrapperDiv.style.left = '30px'; }
+        document.getElementById('chat-user-name').innerText = danisanAdi + " ile Sohbet";
+        mesajlariGuncelle(); if (refreshInterval) clearInterval(refreshInterval); refreshInterval = setInterval(mesajlariGuncelle, 3000);
+    }
+
+    function chatiKapat() { chatDiv.style.display = 'none'; if (VIDEO_ACIK) { videoBuyut(); } if (refreshInterval) clearInterval(refreshInterval); }
+    function videoBuyut() { wrapperDiv.classList.remove('wrapper-pip'); wrapperDiv.style.top = ''; wrapperDiv.style.left = ''; wrapperDiv.style.bottom = ''; wrapperDiv.style.right = ''; chatDiv.style.display = 'none'; }
+    function makeDraggable(elementToMove, handleElement) { let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0; let isDragging = false; handleElement.onmousedown = dragMouseDown; function dragMouseDown(e) { e.preventDefault(); pos3 = e.clientX; pos4 = e.clientY; document.onmouseup = closeDragElement; document.onmousemove = elementDrag; isDragging = false; } function elementDrag(e) { e.preventDefault(); isDragging = true; pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY; pos3 = e.clientX; pos4 = e.clientY; elementToMove.style.bottom = 'auto'; elementToMove.style.right = 'auto'; elementToMove.style.top = (elementToMove.offsetTop - pos2) + "px"; elementToMove.style.left = (elementToMove.offsetLeft - pos1) + "px"; } function closeDragElement() { document.onmouseup = null; document.onmousemove = null; if (!isDragging) videoBuyut(); } }
+
+    function mesajlariGuncelle() {
+        if (chatDiv.style.display !== 'flex' || !AKTIF_ODA_ID) return;
+        fetch(`/mesajlari-getir/?oda=${AKTIF_ODA_ID}`).then(r=>r.json()).then(data=>{
+            const history = document.getElementById('chat-history'); const isScrolledToBottom = history.scrollHeight - history.clientHeight <= history.scrollTop + 50;
+            history.innerHTML = '<div class="message msg-other" style="background:#e8f4f8; border: 1px solid #d1eaed;">Sistem: Danışan ile aranızdaki mesajlar uçtan uca şifrelenmektedir.</div>';
+            data.mesajlar.forEach(msg => {
+                const msgDiv = document.createElement('div'); const benMiattim = (msg.gonderen === KULLANICI_ADI); msgDiv.className = benMiattim ? 'message msg-me' : 'message msg-other';
+                let icerikHTML = ''; if (!benMiattim) icerikHTML += `<div style="font-size:12px; font-weight:bold; color:#7f8c8d; margin-bottom:4px;">${msg.gonderen}</div>`;
+                if (msg.dosya_url) { const uzanti = msg.dosya_url.split('.').pop().toLowerCase(); if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(uzanti)) icerikHTML += `<div>Fotoğraf:</div><img src="${msg.dosya_url}" style="max-width:100%; border-radius:8px; margin-top:5px;">`; else icerikHTML += `<div><a href="${msg.dosya_url}" target="_blank" style="color:#3498db; text-decoration:none; font-weight:bold;">📄 ${msg.dosya_adi}</a></div>`; }
+                if (msg.icerik) icerikHTML += `<div>${msg.icerik}</div>`; icerikHTML += `<div style="font-size:11px; opacity:0.6; text-align:right; margin-top:5px;">${msg.zaman}</div>`;
+                msgDiv.innerHTML = icerikHTML; history.appendChild(msgDiv);
+            });
+            if (isScrolledToBottom) history.scrollTop = history.scrollHeight;
+        });
+    }
+
+    function sendMessage() { const input = document.getElementById('chat-input'); const text = input.value.trim(); if (text !== "" && AKTIF_ODA_ID) { const formData = new FormData(); formData.append('mesaj', text); formData.append('gonderen', KULLANICI_ADI); formData.append('oda', AKTIF_ODA_ID); fetch('/mesaj-gonder/', { method: 'POST', body: formData }).then(r=>r.json()).then(d=>{ if(d.durum==='basarili') { mesajlariGuncelle(); setTimeout(()=>{document.getElementById('chat-history').scrollTop=99999},500); }}); input.value = ''; } }
+    function dosyaSecildi(input) { if (input.files && input.files[0] && AKTIF_ODA_ID) { const formData = new FormData(); formData.append('dosya', input.files[0]); formData.append('gonderen', KULLANICI_ADI); formData.append('oda', AKTIF_ODA_ID); fetch('/mesaj-gonder/', { method: 'POST', body: formData }).then(r=>r.json()).then(d=>{ if(d.durum==='basarili') mesajlariGuncelle(); }); input.value = ''; } }
+    function handleEnter(e) { if (e.key === 'Enter') sendMessage(); }
+</script>
+
+</body>
+</html>

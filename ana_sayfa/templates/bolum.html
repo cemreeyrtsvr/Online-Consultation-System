@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ baslik }} | E-Sağlık Uzmanları</title>
+    <style>
+        /* GENEL AYARLAR VE YENİ ARKA PLAN */
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8; /* Göz yormayan, modern açık gri/mavi tonu */
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden; /* Sayfa bütünlüğü için ana scroll'u kapatıyoruz */
+        }
+
+        /* TUTARLI ÜST MENÜ (HEADER) */
+        .top-navbar {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            z-index: 100;
+        }
+        .brand-logo { font-size: 22px; font-weight: 800; color: #2c3e50; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+        .brand-logo span { color: #3498db; font-weight: 600; font-size: 16px; background: #e8f4f8; padding: 4px 10px; border-radius: 12px; margin-left: 10px; }
+        .nav-actions { display: flex; gap: 15px; }
+        .btn-nav { background: #f0f4f8; color: #2c3e50; padding: 10px 20px; border-radius: 25px; text-decoration: none; font-weight: bold; transition: 0.3s; font-size: 14px; border: 1px solid #e1e8ef; }
+        .btn-nav:hover { background: #3498db; color: white; border-color: #3498db; box-shadow: 0 5px 15px rgba(52,152,219,0.3); }
+
+        /* YÜZEN PANEL MİMARİSİ (FLOATING CARDS) */
+        .page-wrapper {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            flex: 1;
+            height: calc(100vh - 75px);
+            box-sizing: border-box;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* SOL MENÜ (UZMAN LİSTESİ) */
+        .sidebar {
+            width: 350px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .sidebar::-webkit-scrollbar { width: 6px; }
+        .sidebar::-webkit-scrollbar-thumb { background: #d1d7dc; border-radius: 10px; }
+
+        .sidebar-title { font-size: 18px; color: #2c3e50; font-weight: 800; margin: 0 0 10px 5px; padding-bottom: 10px; border-bottom: 2px solid #f0f4f8; }
+
+        .doctor-card {
+            background: #ffffff;
+            border: 1px solid #e1e8ef;
+            padding: 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .doctor-card:hover { border-color: #3498db; transform: translateY(-3px); box-shadow: 0 8px 20px rgba(52,152,219,0.1); }
+        .doctor-card.active { border: 2px solid #3498db; background: #f8fbff; }
+
+        .doc-img { font-size: 30px; background: #f0f4f8; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05); }
+        .doc-mini-info h4 { margin: 0; color: #1c1d1f; font-size: 15px; font-weight: 700; }
+        .doc-mini-info p { margin: 4px 0 0 0; color: #7f8c8d; font-size: 12px; font-weight: 500;}
+        .mini-rating { color: #f39c12; font-size: 12px; font-weight: bold; margin-top: 6px; background: #fdf5e6; display: inline-block; padding: 2px 8px; border-radius: 10px; }
+
+        /* SAĞ TARAF: ANA İÇERİK (PROFİL DETAYI) */
+        .main-content {
+            flex: 1;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .main-content::-webkit-scrollbar { width: 8px; }
+        .main-content::-webkit-scrollbar-thumb { background: #bdc3c7; border-radius: 10px; }
+
+        /* HOŞGELDİN EKRANI */
+        #welcome-screen { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #7f8c8d; text-align: center; background: #fafbfc; border-radius: 20px; }
+        #welcome-screen .icon { font-size: 80px; margin-bottom: 20px; opacity: 0.8; }
+        #welcome-screen h1 { font-size: 32px; margin-bottom: 10px; color: #2c3e50; }
+
+        /* PROFİL SAYFASI (LİNKEDIN/UDEMY TARZI KAPAKLI) */
+        .doctor-profile { display: none; animation: fadeIn 0.4s ease; padding-bottom: 50px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Kapak (Cover) Alanı */
+        .profile-cover {
+            background: linear-gradient(135deg, #3498db, #8e44ad);
+            height: 180px;
+            width: 100%;
+            position: relative;
+            border-radius: 20px 20px 0 0;
+        }
+
+        /* Profil Başlık Bilgileri */
+        .profile-header-info { padding: 0 40px; display: flex; justify-content: space-between; align-items: flex-end; margin-top: -50px; margin-bottom: 30px; }
+
+        .ph-avatar {
+            font-size: 70px;
+            background: white;
+            width: 130px;
+            height: 130px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            border: 6px solid white;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .ph-details { flex: 1; margin-left: 25px; padding-bottom: 10px; }
+        .ph-details h1 { margin: 0 0 5px 0; font-size: 32px; color: #2c3e50; font-weight: 800; }
+        .ph-details .subtitle { font-size: 16px; color: #7f8c8d; font-weight: 500; }
+
+        .ph-stats { display: flex; gap: 15px; padding-bottom: 15px; }
+        .stat-badge { background: #f0f4f8; color: #2c3e50; padding: 8px 15px; border-radius: 12px; font-size: 13px; font-weight: 700; border: 1px solid #e1e8ef; display: flex; align-items: center; gap: 5px;}
+
+        /* Aksiyon Butonları Alanı */
+        .profile-actions { display: flex; justify-content: space-between; align-items: center; padding: 25px 40px; background: #fafbfc; border-top: 1px solid #f0f4f8; border-bottom: 1px solid #f0f4f8; margin-bottom: 30px; }
+        .price-tag { display: flex; flex-direction: column; }
+        .price-tag span { font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; }
+        .price-tag strong { font-size: 28px; font-weight: 800; color: #2c3e50; }
+
+        .btn-group { display: flex; gap: 12px; flex-wrap: wrap; }
+        .btn-big { padding: 14px 24px; font-size: 15px; font-weight: bold; border: none; cursor: pointer; border-radius: 12px; display: flex; align-items: center; gap: 8px; transition: all 0.3s; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+        .btn-randevu { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+        .btn-randevu:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(46, 204, 113, 0.4); }
+
+        .btn-video { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .btn-video:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(155, 89, 182, 0.4); }
+
+        .btn-chat { background: white; color: #2c3e50; border: 1px solid #d1d7dc; box-shadow: none; }
+        .btn-chat:hover { background: #f0f4f8; border-color: #bdc3c7; }
+
+        /* İçerik Gövdeleri (Hakkımda vs.) */
+        .content-section { padding: 0 40px; margin-bottom: 35px; }
+        .section-title { font-size: 20px; font-weight: 800; margin-bottom: 15px; color: #2c3e50; display: flex; align-items: center; gap: 10px; }
+        .section-title::before { content: ""; display: inline-block; width: 6px; height: 20px; background: #3498db; border-radius: 10px; }
+        .bio-text { line-height: 1.7; color: #5c6a79; font-size: 15px; white-space: pre-line; background: #fafbfc; padding: 25px; border-radius: 15px; border: 1px solid #f0f4f8; }
+
+        .tags-container { display: flex; gap: 10px; flex-wrap: wrap; }
+        .big-tag { background: #e8f4f8; padding: 8px 18px; border-radius: 20px; font-weight: 600; color: #3498db; font-size: 14px; }
+
+        /* Yorumlar */
+        .review-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .review-card { background: white; border: 1px solid #e1e8ef; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); transition: 0.3s; position: relative; }
+        .review-card:hover { border-color: #bdc3c7; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        .review-card::after { content: "”"; position: absolute; top: 10px; right: 20px; font-size: 60px; color: #f0f4f8; font-family: serif; line-height: 1; }
+
+        .review-header { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; position: relative; z-index: 2; }
+        .reviewer-initial { width: 45px; height: 45px; background: #2c3e50; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; }
+        .reviewer-name { font-weight: 700; color: #2c3e50; font-size: 15px; }
+        .stars { color: #f1c40f; font-size: 13px; letter-spacing: 2px; }
+        .review-text { color: #5c6a79; font-size: 14px; line-height: 1.6; font-style: italic; position: relative; z-index: 2; }
+
+        /* --- RANDEVU MODALI (AÇILIR PENCERE) --- */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 32, 39, 0.7); z-index: 100000; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+        .modal-content { background: white; padding: 40px; border-radius: 20px; width: 100%; max-width: 420px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-content h3 { margin: 0 0 5px 0; color: #2c3e50; font-size: 24px; font-weight: 800; }
+        .modal-content p { color: #7f8c8d; font-size: 14px; margin-bottom: 25px; font-weight: 500; }
+        .modal-content label { display: block; font-weight: 700; margin-bottom: 8px; color: #34495e; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .modal-content input, .modal-content select { width: 100%; padding: 14px; margin-bottom: 25px; border: 2px solid #e1e8ef; border-radius: 12px; box-sizing: border-box; font-size: 15px; color: #2c3e50; outline: none; transition: 0.3s; background: #f8fafc; }
+        .modal-content input:focus, .modal-content select:focus { border-color: #3498db; background: white; }
+        .modal-buttons { display: flex; justify-content: space-between; gap: 15px; margin-top: 10px; }
+        .btn-cancel { flex: 1; background: #f0f4f8; color: #5c6a79; padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.2s; }
+        .btn-cancel:hover { background: #e1e8ef; color: #2c3e50; }
+        .btn-next { flex: 2; background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.3s; box-shadow: 0 5px 15px rgba(52,152,219,0.3); }
+        .btn-next:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(52,152,219,0.4); }
+
+        /* VİDEO & CHAT ARAÇLARI (Gizli Altyapı) */
+        #video-wrapper { width: 100%; height: 100%; position: relative; display: none; background: #1c1d1f; border-radius: 20px; overflow: hidden; }
+        #pip-header { width: 100%; height: 28px; background: #2c3e50; color: #bdc3c7; display: none; align-items: center; justify-content: center; cursor: move; font-size: 18px; font-weight: bold; user-select: none; z-index: 10001; }
+        #meet { width: 100%; height: 100%; }
+        .wrapper-pip { position: absolute !important; width: 360px !important; height: 280px !important; z-index: 99999 !important; bottom: 30px; right: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); border: 4px solid #fff; border-radius: 15px; overflow: hidden; display: flex !important; flex-direction: column; }
+        .wrapper-pip #pip-header { display: flex; }
+        .wrapper-pip #meet { height: calc(100% - 28px); }
+
+        #chat-interface { width: 100%; height: 100%; display: none; flex-direction: column; background: #fff; z-index: 100; position: absolute; top:0; left:0; border-radius: 20px; overflow: hidden; }
+        .chat-header { padding: 20px; border-bottom: 1px solid #e1e8ef; background: #fafbfc; font-weight: 800; color: #2c3e50; display: flex; align-items: center; gap: 15px; font-size: 18px; }
+        .chat-messages { flex: 1; padding: 25px; overflow-y: auto; background-color: #f0f4f8; display: flex; flex-direction: column; gap: 15px; }
+        .message { max-width: 75%; padding: 12px 18px; border-radius: 15px; font-size: 14px; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.05); line-height: 1.5; }
+        .msg-me { align-self: flex-end; background: #dcf8c6; border-bottom-right-radius: 0; color: #1c1d1f; }
+        .msg-other { align-self: flex-start; background: #fff; border-bottom-left-radius: 0; color: #2c3e50; }
+        .chat-input-area { padding: 20px; background: #fff; display: flex; gap: 15px; align-items: center; border-top: 1px solid #e1e8ef; }
+        #chat-input { flex: 1; padding: 14px 20px; border: 1px solid #d1d7dc; border-radius: 30px; outline: none; font-size: 15px; background: #f8fafc; transition: 0.3s; }
+        #chat-input:focus { border-color: #3498db; background: white; }
+        #send-btn { padding: 14px 30px; background: #3498db; color: white; border: none; border-radius: 30px; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.3s; box-shadow: 0 4px 10px rgba(52,152,219,0.2); }
+        #send-btn:hover { background: #2980b9; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(52,152,219,0.3); }
+        .file-upload-label { cursor: pointer; font-size: 26px; color: #95a5a6; padding: 0 5px; transition: 0.3s; }
+        .file-upload-label:hover { color: #3498db; transform: scale(1.1); }
+    </style>
+</head>
+<body>
+
+<div class="top-navbar">
+    <a href="{% url 'ana_sayfa' %}" class="brand-logo">🏥 E-Sağlık<span>Uzmanlar</span></a>
+    <div class="nav-actions">
+        <a href="{% url 'ana_sayfa' %}" class="btn-nav">← Ana Sayfa</a>
+        <a href="{% url 'profil_sayfasi' %}" class="btn-nav" style="background: #3498db; color: white; border-color:#3498db;">👤 Profilim</a>
+    </div>
+</div>
+
+<div class="page-wrapper">
+
+    <div class="sidebar">
+        <h3 class="sidebar-title">{{ baslik }} ({{ doktorlar|length }})</h3>
+        {% for doktor in doktorlar %}
+        <div class="doctor-card" id="sidecard-{{ doktor.id }}" onclick="showProfile('{{ doktor.id }}')">
+            <div class="doc-img">{{ doktor.resim }}</div>
+            <div class="doc-mini-info">
+                <h4>{{ doktor.ad }}</h4>
+                <p>{{ doktor.unvan }}</p>
+                <div class="mini-rating">⭐ {{ doktor.puan }} ({{ doktor.danisan_sayisi }})</div>
+            </div>
+        </div>
+        {% empty %}
+        <div style="padding: 20px; color: #7f8c8d; text-align: center; font-weight: 500;">Uzman bulunamadı.</div>
+        {% endfor %}
+    </div>
+
+    <div class="main-content">
+
+        <div id="welcome-screen">
+            <div class="icon">👋</div>
+            <h1>Detayları Görmek İçin Seçin</h1>
+            <p>Sol taraftaki listeden bir uzmana tıklayarak<br>özgeçmişini, yorumlarını okuyabilir ve randevu alabilirsiniz.</p>
+        </div>
+
+        {% for doktor in doktorlar %}
+        <div id="profile-{{ doktor.id }}" class="doctor-profile">
+
+            <div class="profile-cover"></div>
+
+            <div class="profile-header-info">
+                <div class="ph-avatar">{{ doktor.resim }}</div>
+                <div class="ph-stats">
+                    <div class="stat-badge">⭐ {{ doktor.puan }} Puan</div>
+                    <div class="stat-badge">👥 {{ doktor.danisan_sayisi }} Görüşme</div>
+                    <div class="stat-badge">🎓 {{ doktor.deneyim }}</div>
+                </div>
+            </div>
+
+            <div class="ph-details" style="padding: 0 40px;">
+                <h1>{{ doktor.ad }}</h1>
+                <div class="subtitle">{{ doktor.unvan }}</div>
+            </div>
+
+            <div class="profile-actions">
+                <div class="price-tag">
+                    <span>Danışmanlık Ücreti</span>
+                    <strong>1.250 TL <small style="font-size: 14px; color:#7f8c8d; font-weight: 500;">/ Seans</small></strong>
+                </div>
+                <div class="btn-group">
+                    <button class="btn-big btn-randevu" onclick="openRandevuModal('{{ doktor.ad }}')">
+                        📅 Hemen Randevu Al
+                    </button>
+                    <button class="btn-big btn-video" onclick="baslatVideo('{{ doktor.id }}', '{{ doktor.ad }}')">
+                        📹 Odaya Bağlan
+                    </button>
+                    <button class="btn-big btn-chat" onclick="baslatChat('{{ doktor.id }}', '{{ doktor.ad }}')">
+                        💬 Mesaj Gönder
+                    </button>
+                </div>
+            </div>
+
+            <div class="content-section">
+                <div class="section-title">Uzman Hakkında</div>
+                <div class="bio-text">{{ doktor.uzun_bilgi }}</div>
+            </div>
+
+            <div class="content-section">
+                <div class="section-title">Çalışma Alanları</div>
+                <div class="tags-container">
+                    {% for alan in doktor.alanlar %}
+                    <span class="big-tag"># {{ alan }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="content-section">
+                <div class="section-title">Danışan Değerlendirmeleri</div>
+                <div class="review-grid">
+                    {% for yorum in doktor.yorumlar %}
+                    <div class="review-card">
+                        <div class="review-header">
+                            <div class="reviewer-initial">{{ yorum.ad|slice:":1" }}</div>
+                            <div>
+                                <div class="reviewer-name">{{ yorum.ad }}</div>
+                                <div class="stars">
+                                    {% if yorum.puan == 5 %}★★★★★{% endif %}
+                                    {% if yorum.puan == 4 %}★★★★☆{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="review-text">{{ yorum.yorum }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <div id="video-wrapper">
+            <div id="pip-header" title="Taşı / Büyüt">⋮⋮ Sürükle ⋮⋮</div>
+            <div id="meet"></div>
+        </div>
+
+        <div id="chat-interface">
+            <div class="chat-header">
+                <span id="chat-user-avatar" style="font-size: 26px;">👨‍⚕️</span>
+                <span id="chat-user-name">Sohbet</span>
+                <button onclick="chatiKapat()" style="margin-left:auto; background:none; border:none; font-size:24px; color:#7f8c8d; cursor:pointer;" title="Kapat">✖</button>
+            </div>
+            <div class="chat-messages" id="chat-history">
+                <div class="message msg-other">Merhaba, size nasıl yardımcı olabilirim?</div>
+            </div>
+            <div class="chat-input-area">
+                <label for="file-upload" class="file-upload-label" title="Dosya/Fotoğraf Gönder">📎</label>
+                <input type="file" id="file-upload" style="display: none;" onchange="dosyaSecildi(this)">
+                <input type="text" id="chat-input" placeholder="Mesajınızı yazın..." onkeypress="handleEnter(event)">
+                <button id="send-btn" onclick="sendMessage()">Gönder</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="randevu-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Randevu Oluştur</h3>
+        <p id="randevu-doktor-isim">Doktor Adı</p>
+
+        <label>Tarih Seçiniz</label>
+        <input type="date" id="randevu-tarih" required>
+
+        <label>Saat Seçiniz</label>
+        <select id="randevu-saat">
+            <option value="" disabled selected>Uygun saatlerden birini seçin</option>
+            <option value="09:00">09:00 - 09:50 (Sabah)</option>
+            <option value="10:00">10:00 - 10:50 (Sabah)</option>
+            <option value="11:30">11:30 - 12:20 (Öğle)</option>
+            <option value="14:00">14:00 - 14:50 (Öğle Sonrası)</option>
+            <option value="15:30">15:30 - 16:20 (Öğle Sonrası)</option>
+            <option value="17:00">17:00 - 17:50 (Akşam Üzeri)</option>
+        </select>
+
+        <div class="modal-buttons">
+            <button class="btn-cancel" onclick="closeRandevuModal()">Vazgeç</button>
+            <button class="btn-next" onclick="odemeSayfasinaGit()">Ödeme Adımına Geç →</button>
+        </div>
+    </div>
+</div>
+
+<script src='https://meet.jit.si/external_api.js'></script>
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const doktorModu = urlParams.get('mod') === 'doktor';
+    const KULLANICI_ADI = doktorModu ? 'Uzman' : 'Danışan';
+    let AKTIF_ODA_ID = null;
+    let VIDEO_ACIK = false;
+    let api = null;
+    let refreshInterval = null;
+
+    const wrapperDiv = document.getElementById('video-wrapper');
+    const meetDiv = document.getElementById('meet');
+    const pipHeader = document.getElementById('pip-header');
+    const chatDiv = document.getElementById('chat-interface');
+    const welcomeDiv = document.getElementById('welcome-screen');
+
+    let seciliDoktorAdRandevu = "";
+
+    function openRandevuModal(doktorAdi) {
+        seciliDoktorAdRandevu = doktorAdi;
+        document.getElementById('randevu-doktor-isim').innerText = "Uzman: " + doktorAdi;
+        document.getElementById('randevu-modal').style.display = 'flex';
+        let today = new Date().toISOString().split('T')[0];
+        document.getElementById("randevu-tarih").setAttribute('min', today);
+    }
+
+    function closeRandevuModal() {
+        document.getElementById('randevu-modal').style.display = 'none';
+    }
+
+    function odemeSayfasinaGit() {
+        const tarih = document.getElementById('randevu-tarih').value;
+        const saat = document.getElementById('randevu-saat').value;
+        if(!tarih || !saat) { alert("Lütfen randevu tarihini ve saatini eksiksiz seçin."); return; }
+        const url = `/odeme/?doktor=${encodeURIComponent(seciliDoktorAdRandevu)}&tarih=${tarih}&saat=${saat}`;
+        window.location.href = url;
+    }
+
+    function showProfile(doktorId) {
+        welcomeDiv.style.display = 'none';
+        if (!VIDEO_ACIK) { wrapperDiv.style.display = 'none'; chatDiv.style.display = 'none'; }
+
+        document.querySelectorAll('.doctor-profile').forEach(el => el.style.display = 'none');
+        const selectedProfile = document.getElementById('profile-' + doktorId);
+        if (selectedProfile) selectedProfile.style.display = 'block';
+
+        // Sol menü aktiflik efekti
+        document.querySelectorAll('.doctor-card').forEach(c => c.classList.remove('active'));
+        document.getElementById('sidecard-' + doktorId).classList.add('active');
+    }
+
+    function baslatVideo(doktorId, doktorAdi) {
+        document.querySelectorAll('.doctor-profile').forEach(el => el.style.display = 'none');
+        wrapperDiv.style.display = 'block'; wrapperDiv.classList.remove('wrapper-pip');
+        wrapperDiv.style.top = ''; wrapperDiv.style.left = ''; wrapperDiv.style.bottom = ''; wrapperDiv.style.right = '';
+        VIDEO_ACIK = true; AKTIF_ODA_ID = doktorId;
+        if (refreshInterval) clearInterval(refreshInterval);
+        if (api) return;
+        const domain = 'meet.jit.si';
+        const options = { roomName: 'Proje-Oda-' + doktorId, width: '100%', height: '100%', parentNode: meetDiv, lang: 'tr', configOverwrite: { startWithAudioMuted: true, startWithVideoMuted: false }, userInfo: { displayName: KULLANICI_ADI } };
+        api = new JitsiMeetExternalAPI(domain, options);
+        makeDraggable(wrapperDiv, pipHeader);
+    }
+
+    function baslatChat(doktorId, doktorAdi) {
+        AKTIF_ODA_ID = doktorId;
+        document.querySelectorAll('.doctor-profile').forEach(el => el.style.display = 'none');
+        chatDiv.style.display = 'flex';
+        if (VIDEO_ACIK) { wrapperDiv.classList.add('wrapper-pip'); wrapperDiv.style.display = 'flex'; wrapperDiv.style.bottom = '30px'; wrapperDiv.style.right = '30px'; wrapperDiv.style.top = ''; wrapperDiv.style.left = ''; } else { wrapperDiv.style.display = 'none'; }
+        const chatUser = document.getElementById('chat-user-name');
+        if (doktorModu) chatUser.innerText = "Danışan ile Sohbet (" + doktorAdi + ")"; else chatUser.innerText = doktorAdi;
+        mesajlariGuncelle();
+        if (refreshInterval) clearInterval(refreshInterval); refreshInterval = setInterval(mesajlariGuncelle, 3000);
+    }
+
+    function chatiKapat() { chatDiv.style.display = 'none'; if (VIDEO_ACIK) { videoBuyut(); } else { showProfile(AKTIF_ODA_ID); } if (refreshInterval) clearInterval(refreshInterval); }
+    function videoBuyut() { wrapperDiv.classList.remove('wrapper-pip'); wrapperDiv.style.top = ''; wrapperDiv.style.left = ''; wrapperDiv.style.bottom = ''; wrapperDiv.style.right = ''; chatDiv.style.display = 'none'; }
+    function makeDraggable(elementToMove, handleElement) { let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0; let isDragging = false; handleElement.onmousedown = dragMouseDown; function dragMouseDown(e) { e.preventDefault(); pos3 = e.clientX; pos4 = e.clientY; document.onmouseup = closeDragElement; document.onmousemove = elementDrag; isDragging = false; } function elementDrag(e) { e.preventDefault(); isDragging = true; pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY; pos3 = e.clientX; pos4 = e.clientY; elementToMove.style.bottom = 'auto'; elementToMove.style.right = 'auto'; elementToMove.style.top = (elementToMove.offsetTop - pos2) + "px"; elementToMove.style.left = (elementToMove.offsetLeft - pos1) + "px"; } function closeDragElement() { document.onmouseup = null; document.onmousemove = null; if (!isDragging) videoBuyut(); } }
+
+    function mesajlariGuncelle() {
+        if (chatDiv.style.display !== 'flex' || !AKTIF_ODA_ID) return;
+        fetch(`/mesajlari-getir/?oda=${AKTIF_ODA_ID}`).then(r=>r.json()).then(data=>{
+            const history = document.getElementById('chat-history'); const isScrolledToBottom = history.scrollHeight - history.clientHeight <= history.scrollTop + 50;
+            const karsilama = doktorModu ? '<div class="message msg-me">Sistem: Doktor paneline hoşgeldiniz.</div>' : '<div class="message msg-other">Uzman asistanına hoşgeldiniz. Size nasıl yardımcı olabilirim?</div>';
+            history.innerHTML = karsilama;
+            data.mesajlar.forEach(msg => {
+                const msgDiv = document.createElement('div'); const benMiattim = (msg.gonderen === KULLANICI_ADI); msgDiv.className = benMiattim ? 'message msg-me' : 'message msg-other';
+                let icerikHTML = ''; if (!benMiattim) icerikHTML += `<div style="font-size:12px; font-weight:bold; color:#7f8c8d; margin-bottom:4px;">${msg.gonderen}</div>`;
+                if (msg.dosya_url) { const uzanti = msg.dosya_url.split('.').pop().toLowerCase(); if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(uzanti)) icerikHTML += `<div>Fotoğraf:</div><img src="${msg.dosya_url}" class="chat-image" style="max-width:100%; border-radius:8px; margin-top:5px;">`; else icerikHTML += `<div class="chat-file"><a href="${msg.dosya_url}" target="_blank" style="text-decoration:none; color:#3498db;">📄 ${msg.dosya_adi}</a></div>`; }
+                if (msg.icerik) icerikHTML += `<div>${msg.icerik}</div>`; icerikHTML += `<div style="font-size:11px; opacity:0.6; text-align:right; margin-top:5px;">${msg.zaman}</div>`;
+                msgDiv.innerHTML = icerikHTML; history.appendChild(msgDiv);
+            });
+            if (isScrolledToBottom) history.scrollTop = history.scrollHeight;
+        });
+    }
+
+    function sendMessage() { const input = document.getElementById('chat-input'); const text = input.value.trim(); if (text !== "" && AKTIF_ODA_ID) { const formData = new FormData(); formData.append('mesaj', text); formData.append('gonderen', KULLANICI_ADI); formData.append('oda', AKTIF_ODA_ID); fetch('/mesaj-gonder/', { method: 'POST', body: formData }).then(r=>r.json()).then(d=>{ if(d.durum==='basarili') { mesajlariGuncelle(); setTimeout(()=>{document.getElementById('chat-history').scrollTop=99999},500); }}); input.value = ''; } }
+    function dosyaSecildi(input) { if (input.files && input.files[0] && AKTIF_ODA_ID) { const formData = new FormData(); formData.append('dosya', input.files[0]); formData.append('gonderen', KULLANICI_ADI); formData.append('oda', AKTIF_ODA_ID); fetch('/mesaj-gonder/', { method: 'POST', body: formData }).then(r=>r.json()).then(d=>{ if(d.durum==='basarili') mesajlariGuncelle(); }); input.value = ''; } }
+    function handleEnter(e) { if (e.key === 'Enter') sendMessage(); }
+</script>
+
+</body>
+</html>
