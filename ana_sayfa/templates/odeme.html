@@ -2,95 +2,84 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Güvenli Ödeme</title>
+    <title>Güvenli Ödeme | E-Sağlık Elite</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-        .checkout-container { background: white; width: 100%; max-width: 800px; border-radius: 15px; box-shadow: 0 15px 40px rgba(0,0,0,0.1); display: flex; overflow: hidden; }
-
-        /* Sol Taraf: Özet */
-        .summary-side { background: #2c3e50; color: white; padding: 40px; width: 40%; display: flex; flex-direction: column; justify-content: space-between; }
-        .summary-side h2 { margin-top: 0; color: #4facfe; }
-        .detail-item { margin-bottom: 20px; }
-        .detail-item span { display: block; font-size: 12px; color: #bdc3c7; text-transform: uppercase; letter-spacing: 1px; }
-        .detail-item strong { font-size: 18px; }
-        .total-price { font-size: 32px; font-weight: bold; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px; margin-top: 20px; }
-
-        /* Sağ Taraf: Kart Bilgileri */
-        .payment-side { padding: 40px; width: 60%; background: #ffffff; }
-        .payment-side h3 { margin-top: 0; color: #333; margin-bottom: 25px; }
-
-        .input-group { margin-bottom: 20px; }
-        .input-group label { display: block; font-size: 13px; color: #666; font-weight: bold; margin-bottom: 8px; }
-        .input-group input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; box-sizing: border-box; outline: none; transition: 0.3s; }
-        .input-group input:focus { border-color: #3498db; box-shadow: 0 0 5px rgba(52,152,219,0.3); }
-
-        .row { display: flex; gap: 15px; }
-        .row .input-group { flex: 1; }
-
-        .btn-pay { width: 100%; padding: 16px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
-        .btn-pay:hover { background: #219150; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(39,174,96,0.4); }
-
-        .back-btn { display: inline-block; margin-top: 20px; color: #95a5a6; text-decoration: none; font-size: 14px; }
-        .back-btn:hover { color: #333; }
+        body {
+            margin: 0; font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+        }
+        .payment-card {
+            background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px);
+            width: 100%; max-width: 450px; padding: 40px; border-radius: 30px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.1); text-align: center;
+        }
+        .summary-box {
+            background: #f8fafc; padding: 20px; border-radius: 20px; margin: 25px 0;
+            border: 1px dashed #3498db; text-align: left;
+        }
+        .input-group { text-align: left; margin-bottom: 15px; }
+        label { display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 5px; }
+        input {
+            width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #edf2f7;
+            box-sizing: border-box; outline: none; transition: 0.3s;
+        }
+        input:focus { border-color: #3498db; }
+        .btn-complete {
+            background: #2ecc71; color: white; border: none; width: 100%; padding: 18px;
+            border-radius: 15px; font-size: 17px; font-weight: 800; cursor: pointer;
+            box-shadow: 0 10px 20px rgba(46,204,113,0.3);
+            transition: 0.3s;
+        }
+        .btn-complete:hover {
+            transform: translateY(-2px);
+            background: #27ae60;
+        }
     </style>
 </head>
 <body>
+    <div class="payment-card">
+        <i class="fas fa-shield-alt" style="font-size: 40px; color: #3498db; margin-bottom: 15px;"></i>
+        <h2 style="margin:0;">Ödeme Detayları</h2>
 
-<div class="checkout-container">
-    <div class="summary-side">
-        <div>
-            <h2>Randevu Özeti</h2>
-            <div class="detail-item">
-                <span>Uzman</span>
-                <strong>{{ doktor_adi }}</strong>
+        <div class="summary-box">
+            <small style="color:#3498db; font-weight:800;">RANDEVU ÖZETİ</small>
+            <div style="margin-top:10px;">
+                <b>{{ saat.uzman.unvan }} {{ saat.uzman.ad_soyad }}</b><br>
+                <span><i class="far fa-calendar"></i> {{ saat.gun|date:"d F Y" }}</span><br>
+                <span><i class="far fa-clock"></i> {{ saat.saat|time:"H:i" }}</span>
             </div>
-            <div class="detail-item">
-                <span>Tarih</span>
-                <strong>{{ tarih }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Saat</span>
-                <strong>{{ saat }}</strong>
+            <div style="margin-top:10px; border-top:1px solid #ddd; padding-top:10px; font-weight:900; color:#2ecc71; font-size:18px;">
+                Toplam Tutar: {{ ucret }} TL
             </div>
         </div>
-        <div class="total-price">
-            {{ fiyat }}
-        </div>
-    </div>
 
-    <div class="payment-side">
-        <h3>Kart Bilgileri (Demo)</h3>
-        <div class="input-group">
-            <label>Kart Üzerindeki İsim</label>
-            <input type="text" placeholder="Ad Soyad" value="Test Kullanıcısı">
-        </div>
-        <div class="input-group">
-            <label>Kart Numarası</label>
-            <input type="text" placeholder="0000 0000 0000 0000" value="4543 1234 5678 9012">
-        </div>
-        <div class="row">
+        <form method="POST">
+            {% csrf_token %}
             <div class="input-group">
-                <label>Son Kullanma (AA/YY)</label>
-                <input type="text" placeholder="12/26" value="12/28">
+                <label>Kart Üzerindeki İsim</label>
+                <input type="text" name="kart_isim" placeholder="AYŞE ZORLU" required>
             </div>
             <div class="input-group">
-                <label>CVV</label>
-                <input type="text" placeholder="123" value="123">
+                <label>Kart Numarası</label>
+                <input type="text" name="kart_no" placeholder="**** **** **** ****" required>
             </div>
-        </div>
-
-        <button class="btn-pay" onclick="odemeTamamla()">Ödemeyi Tamamla ve Onayla</button>
-        <a href="javascript:history.back()" class="back-btn">← Vazgeç ve Geri Dön</a>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div class="input-group">
+                    <label>Sona Erme</label>
+                    <input type="text" name="son_tarih" placeholder="AA/YY" required>
+                </div>
+                <div class="input-group">
+                    <label>CVV</label>
+                    <input type="password" name="cvv" placeholder="***" required>
+                </div>
+            </div>
+            <button type="submit" class="btn-complete">
+                <i class="fas fa-lock"></i> {{ ucret }} TL Ödemeyi Tamamla
+            </button>
+            <a href="{% url 'ana_sayfa' %}" style="display:block; margin-top:15px; color:#94a3b8; text-decoration:none; font-size:13px; font-weight:600;">Vazgeç ve Dön</a>
+        </form>
     </div>
-</div>
-
-<script>
-    function odemeTamamla() {
-        // Demoda ödeme yapılmış gibi gösterip ana sayfaya atıyoruz
-        alert("🎉 Ödemeniz başarıyla alındı!\nRandevunuz onaylanmıştır. Randevu saatinizde sisteme giriş yapmayı unutmayın.");
-        window.location.href = "{% url 'ana_sayfa' %}";
-    }
-</script>
-
 </body>
 </html>

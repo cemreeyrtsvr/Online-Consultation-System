@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Çalışma Saatlerimi Düzenle | E-Sağlık</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --primary: #2ecc71; --dark: #2c3e50; --bg: #f0f4f8; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+
+        .setup-card {
+            background: white;
+            width: 100%;
+            max-width: 600px;
+            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .header-box { margin-bottom: 30px; }
+        .header-box i { font-size: 40px; color: var(--primary); margin-bottom: 15px; }
+
+        .form-group { text-align: left; margin-bottom: 25px; }
+        label { display: block; font-weight: 700; color: var(--dark); margin-bottom: 10px; font-size: 14px; }
+
+        input[type="date"] {
+            width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #edf2f7;
+            font-size: 16px; outline: none; transition: 0.3s; box-sizing: border-box;
+        }
+
+        .hours-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .hour-item {
+            position: relative;
+            background: #f8fafc;
+            border: 2px solid #edf2f7;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 600;
+            transition: 0.3s;
+            font-size: 14px;
+        }
+
+        .hour-item input { display: none; }
+        .hour-item:hover { border-color: var(--primary); background: #f0fff4; }
+
+        .hour-item:has(input:checked) {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .btn-save {
+            background: var(--primary);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 16px;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-cancel { display: inline-block; margin-top: 20px; color: #94a3b8; text-decoration: none; font-size: 14px; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="setup-card">
+    <div class="header-box">
+        <i class="fas fa-calendar-plus"></i>
+        <h2 style="margin:0;">Müsaitlik Durumunu Belirle</h2>
+        <p style="color:#7f8c8d;">Danışan kabul edeceğiniz gün ve saatleri seçin.</p>
+    </div>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label><i class="fas fa-calendar-day"></i> Tarih Seçin</label>
+            <input type="date" name="tarih" required min="2026-03-31">
+        </div>
+
+        <div class="form-group">
+            <label><i class="fas fa-clock"></i> Saatleri Seçin (Çoklu Seçim)</label>
+            <div class="hours-grid">
+                <label class="hour-item"><input type="checkbox" name="saatler" value="09:00">09:00</label>
+                <label class="hour-item"><input type="checkbox" name="saatler" value="10:00">10:00</label>
+                <label class="hour-item"><input type="checkbox" name="saatler" value="11:00">11:00</label>
+                <label class="hour-item"><input type="checkbox" name="saatler" value="12:00">12:00</label>
+                <label class="hour-item"><input type="checkbox" name="saatler" value="13:00">13:00</label>
+                <label class="hour-item"><input type="checkbox" name="saatler" value="14:00">14:00</label>
+                <label class="hour-item"><input type="checkbox" name="saatler" value="15:00">15:00</label>
+                <label class="hour-item"><input type="checkbox" name="saatler" value="16:00">16:00</label>
+                <label class="hour-item"><input type="checkbox" name="saatler" value="17:00">17:00</label>
+                <label class="hour-item"><input type="checkbox" name="saatler" value="18:00">18:00</label>
+                <label class="hour-item"><input type="checkbox" name="saatler" value="19:00">19:00</label>
+                <label class="hour-item"><input type="checkbox" name="saatler" value="20:00">20:00</label>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-save">
+            <i class="fas fa-check-circle"></i> Çalışma Saatlerini Kaydet
+        </button>
+
+        <a href="{% url 'profil_sayfasi' %}" class="btn-cancel">Vazgeç ve Profile Dön</a>
+    </form>
+</div>
+
+</body>
+</html>

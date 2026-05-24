@@ -1,204 +1,275 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout as auth_logout, update_session_auth_hash
+from django.contrib.auth.decorators import login_required
+from .models import Uzman, Danisan, Randevu, Mesaj, Musaitlik, Yorum
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from .models import Mesaj
-import random
+from django.db.models import Q, Avg
+from decimal import Decimal
 
-
+# --- 1. GİRİŞ & KAYIT SİSTEMİ ---
 def giris_sayfasi(request):
     return render(request, 'index.html')
 
+def kayit_ol(request, rol):
+    hata = None
+    if request.method == 'POST':
+        u_name = request.POST.get('u_name', '').strip()
+        ad = request.POST.get('ad', '').strip()
+        soyad = request.POST.get('soyad', '').strip()
+        email = request.POST.get('email', '').strip().lower()
+        sifre = request.POST.get('sifre')
+
+        if " " in u_name:
+            hata = "Kullanıcı adında boşluk olamaz!"
+        elif User.objects.filter(username=u_name).exists():
+            hata = "Bu kullanıcı adı zaten alınmış!"
+        elif User.objects.filter(email=email).exists():
+            hata = "Bu e-posta adresi zaten kullanımda!"
+        elif rol == 'uzman':
+            anahtar = request.POST.get('uzman_anahtar')
+            if anahtar != "uzman2026":
+                hata = "Geçersiz uzmanlık anahtarı!"
+
+        if hata:
+            return render(request, 'kayit.html', {'rol': rol, 'hata': hata})
+
+        yeni_user = User.objects.create_user(
+            username=u_name, password=sifre, email=email,
+            first_name=ad, last_name=soyad
+        )
+
+        if rol == 'ogrenci':
+            Danisan.objects.create(user=yeni_user)
+            login(request, yeni_user)
+            return redirect('ana_sayfa')
+        else:
+            brans = request.POST.get('brans', 'psikolog')
+            Uzman.objects.create(
+                user=yeni_user, ad_soyad=f"{ad} {soyad}",
+                brans=brans, unvan="Uzman Danışman",
+                resim_emoji="👨‍⚕️"
+            )
+            login(request, yeni_user)
+            return redirect('profil_sayfasi')
+    return render(request, 'kayit.html', {'rol': rol})
 
 def login_sayfasi(request, rol):
+    hata = None
     if request.method == 'POST':
-        if rol == 'ogrenci':
-            return redirect('ana_sayfa')
-        elif rol == 'danisan':
-            return redirect('danisan_sayfasi')
+        u_name = request.POST.get('username')
+        sifre = request.POST.get('password')
+        user = authenticate(request, username=u_name, password=sifre)
+        if user is not None:
+            login(request, user)
+            return redirect('ana_sayfa' if hasattr(user, 'danisan') else 'profil_sayfasi')
+        else:
+            hata = "Kullanıcı adı veya şifre hatalı!"
+    rol_gosterimi = "Öğrenci" if rol == 'ogrenci' else "Danışman"
+    return render(request, 'login.html', {'rol': rol, 'rol_gosterimi': rol_gosterimi, 'hata': hata})
 
-    rol_gosterimi = "Öğrenci" if rol == 'ogrenci' else "Danışman / Uzman"
-    return render(request, 'login.html', {'rol': rol, 'rol_gosterimi': rol_gosterimi})
+# --- 2. PROFİL YÖNETİMİ ---
+@login_required
+def profil_sayfasi(request):
+    user = request.user
+    is_uzman = hasattr(user, 'uzman')
+    profil_obj = user.uzman if is_uzman else user.danisan
 
+    if is_uzman:
+        yaklasan = Randevu.objects.filter(uzman__user=user)
+        # UZMAN İÇİN: Kendisine gelen tüm benzersiz sohbet odalarını bul
+        # oda_adi formatımız: oda_admin_danisanadi
+        aktif_sohbetler = Mesaj.objects.filter(oda__contains=user.username).values('oda').distinct()
+    else:
+        yaklasan = Randevu.objects.filter(danisan__user=user)
+        # DANIŞAN İÇİN: Kendi mesajlarını ve uzmanlarını listele
+        aktif_sohbetler = Mesaj.objects.filter(oda__contains=user.username).values('oda').distinct()
 
+    kullanici_verisi = {
+        'ad_soyad': f"{user.first_name} {user.last_name}",
+        'email': user.email,
+        'kayit_tarihi': user.date_joined.strftime("%B %Y"),
+        'ilk_harf': user.first_name[0].upper() if user.first_name else "U",
+        'telefon': getattr(profil_obj, 'telefon', 'Belirtilmedi'),
+        'foto': profil_obj.profil_resmi.url if profil_obj.profil_resmi else None,
+        'bakiye': getattr(profil_obj, 'bakiye', 0)
+    }
+
+    return render(request, 'profil.html', {
+        'kullanici': kullanici_verisi,
+        'yaklasan_randevular': yaklasan,
+        'is_uzman': is_uzman,
+        'aktif_sohbetler': aktif_sohbetler # Burası önemli!
+    })
+
+@login_required
+def profil_duzenle(request):
+    user = request.user
+    profil = user.uzman if hasattr(user, 'uzman') else user.danisan
+    if request.method == 'POST':
+        user.first_name = request.POST.get('ad')
+        user.last_name = request.POST.get('soyad')
+        user.email = request.POST.get('email')
+        yeni_sifre = request.POST.get('sifre')
+        if yeni_sifre and yeni_sifre.strip() != "":
+            user.set_password(yeni_sifre)
+            update_session_auth_hash(request, user)
+        user.save()
+        if request.FILES.get('profil_foto'):
+            profil.profil_resmi = request.FILES.get('profil_foto')
+        if hasattr(user, 'danisan'):
+            profil.telefon = request.POST.get('telefon')
+        profil.save()
+        return redirect('profil_sayfasi')
+    return render(request, 'profil_duzenle.html', {'profil': profil})
+
+# --- 3. ANA SAYFA & ARAMA MOTORU ---
 def ana_sayfa(request):
-    return render(request, 'home.html')
-
+    query = request.GET.get('q')
+    uzmanlar = None
+    if query:
+        uzmanlar = Uzman.objects.filter(
+            Q(ad_soyad__icontains=query) | Q(brans__icontains=query),
+            aktif_mi=True
+        )
+    toplam_uzman = Uzman.objects.filter(aktif_mi=True).count()
+    return render(request, 'home.html', {'uzmanlar': uzmanlar, 'query': query, 'toplam_uzman': toplam_uzman})
 
 def bolum_detay(request, bolum_adi):
-    basliklar = {
-        'diyetisyen': 'Beslenme ve Diyet Uzmanları',
-        'psikolog': 'Online Psikolog & Terapi',
-        'fizyoterapi': 'Fizyoterapi ve Rehabilitasyon',
-    }
+    uzmanlar = Uzman.objects.filter(brans=bolum_adi, aktif_mi=True).annotate(ortalama_puan=Avg('yorumlar__puan'))
+    return render(request, 'bolum.html', {'doktorlar': uzmanlar, 'bolum_adi': bolum_adi.title()})
 
-    yorumlar_havuzu = [
-        {'ad': 'Elif K.', 'puan': 5,
-         'yorum': 'Hocamız çok ilgili, sürecim harika ilerliyor. Kesinlikle tavsiye ederim.'},
-        {'ad': 'Murat T.', 'puan': 5, 'yorum': 'İlk seanstan itibaren farkı hissettim. Enerjisi çok yüksek.'},
-        {'ad': 'Selin A.', 'puan': 4,
-         'yorum': 'Çok bilgili bir uzman, sadece randevu saatlerinde bazen yoğunluk oluyor.'},
-        {'ad': 'Ahmet Y.', 'puan': 5, 'yorum': 'Hayatımı değiştirdi diyebilirim. Teşekkürler hocam!'},
-        {'ad': 'Canan B.', 'puan': 5, 'yorum': 'Detaylı açıklamaları ve güler yüzü ile çok memnun kaldım.'},
-    ]
+# --- 4. UZMAN & DANIŞAN SEANS YÖNETİMİ ---
+@login_required
+def uzman_saat_ekle(request):
+    if not hasattr(request.user, 'uzman'):
+        return redirect('ana_sayfa')
+    if request.method == 'POST':
+        tarih = request.POST.get('tarih')
+        saatler = request.POST.getlist('saatler')
+        for s in saatler:
+            Musaitlik.objects.get_or_create(uzman=request.user.uzman, gun=tarih, saat=s)
+        return redirect('profil_sayfasi')
+    return render(request, 'uzman_saat_ekle.html')
 
-    tum_doktorlar = {
-        'diyetisyen': [
-            {
-                'id': 'dyt-ayse',
-                'ad': 'Uzm. Dyt. Ayşe Yılmaz',
-                'resim': '👩‍⚕️',
-                'unvan': 'Klinik Beslenme Uzmanı',
-                'puan': 4.9,
-                'danisan_sayisi': 1240,
-                'deneyim': '12 Yıl',
-                'kisa_ozet': 'Sürdürülebilir beslenme ve metabolizma hastalıkları uzmanı.',
-                'uzun_bilgi': """Hacettepe Üniversitesi Beslenme ve Diyetetik bölümünden 2012 yılında onur derecesiyle mezun oldum. Ardından İngiltere'de "Metabolik Sendrom ve Beslenme" üzerine yüksek lisansımı tamamladım. 
+@login_required
+def randevu_saat_sec(request, uzman_id):
+    uzman = get_object_or_404(Uzman, id=uzman_id)
+    danisan = get_object_or_404(Danisan, user=request.user)
+    bos_saatler = Musaitlik.objects.filter(uzman=uzman, dolu_mu=False).order_by('gun', 'saat')
+    if request.method == 'POST':
+        saat_id = request.POST.get('saat_id')
+        odeme_turu = request.POST.get('odeme_turu')
+        if odeme_turu == 'cuzdan':
+            return redirect('cuzdanla_ode', saat_id=saat_id)
+        return redirect('odeme_yap', saat_id=saat_id)
+    return render(request, 'saat_secimi.html', {'uzman': uzman, 'bos_saatler': bos_saatler, 'bakiye': danisan.bakiye})
 
-12 yıllık meslek hayatımda 1000'den fazla danışanla birebir çalışma fırsatı buldum. Benim felsefem "Diyet yapmak değil, yaşam tarzını değiştirmek" üzerine kuruludur. Yasaklarla dolu listeler yerine, sevdiğiniz yiyecekleri porsiyon kontrolüyle hayatınıza entegre etmeyi öğretiyorum.
+@login_required
+def odeme_yap(request, saat_id):
+    saat = get_object_or_404(Musaitlik, id=saat_id)
+    danisan_obj = get_object_or_404(Danisan, user=request.user)
+    if request.method == 'POST':
+        Randevu.objects.create(danisan=danisan_obj, uzman=saat.uzman, tarih=saat.gun, saat=saat.saat, durum='beklemede', alinan_ucret=saat.uzman.ucret, odeme_alindi=True)
+        saat.dolu_mu = True
+        saat.save()
+        return redirect('profil_sayfasi')
+    return render(request, 'odeme.html', {'saat': saat, 'ucret': saat.uzman.ucret})
 
-Özellikle İnsülin Direnci, Haşimato ve Polikistik Over Sendromu (PKOS) beslenmesi konularında uzmanlaştım. Sizi de bu sağlıklı yolculuğa bekliyorum.""",
-                'alanlar': ['Kilo Yönetimi', 'Diyabet', 'Hamilelik', 'Vegan Beslenme'],
-                'yorumlar': random.sample(yorumlar_havuzu, 3)
-            },
-            {
-                'id': 'dyt-mehmet',
-                'ad': 'Dyt. Mehmet Demir',
-                'resim': '👨‍⚕️',
-                'unvan': 'Sporcu Beslenmesi Uzmanı',
-                'puan': 4.7,
-                'danisan_sayisi': 850,
-                'deneyim': '6 Yıl',
-                'kisa_ozet': 'Profesyonel sporcular ve kas kazanımı odaklı beslenme.',
-                'uzun_bilgi': """Spor bilimleri ve beslenme disiplinlerini birleştirerek, sporcuların performansını maksimize etmeyi hedefliyorum. Milli takım seviyesindeki sporculardan, hobi amaçlı fitness yapan bireylere kadar geniş bir yelpazede danışmanlık veriyorum.
+# --- 5. CÜZDAN İŞLEMLERİ ---
+@login_required
+def bakiye_yukle(request):
+    danisan = get_object_or_404(Danisan, user=request.user)
+    if request.method == 'POST':
+        miktar = request.POST.get('miktar')
+        if miktar:
+            danisan.bakiye += Decimal(miktar)
+            danisan.save()
+            return redirect('profil_sayfasi')
+    return render(request, 'bakiye_yukle.html')
 
-Kas kütlesini artırmak, yağ oranını düşürmek veya maraton/triatlon gibi yarışlara hazırlanmak istiyorsanız doğru yerdesiniz. Kulaktan dolma bilgiler yerine, tamamen supplement (takviye) kullanımı konusunda bilimsel ve kanıta dayalı rehberlik sunuyorum.""",
-                'alanlar': ['Sporcu Beslenmesi', 'Supplement', 'Kilo Alma', 'Performans'],
-                'yorumlar': random.sample(yorumlar_havuzu, 3)
-            },
-        ],
-        'psikolog': [
-            {
-                'id': 'psk-zeynep',
-                'ad': 'Uzm. Psk. Zeynep Kaya',
-                'resim': '👩‍⚕️',
-                'unvan': 'Klinik Psikolog',
-                'puan': 5.0,
-                'danisan_sayisi': 2100,
-                'deneyim': '15 Yıl',
-                'kisa_ozet': 'Bilişsel Davranışçı Terapi (BDT) ve EMDR uygulayıcısı.',
-                'uzun_bilgi': """Boğaziçi Üniversitesi Psikoloji bölümü mezunuyum. Klinik Psikoloji yüksek lisansımı Hollanda'da tamamladım. 15 yıldır aktif olarak danışan görüyorum. Uzmanlık alanım Kaygı Bozuklukları (Anksiyete) ve Depresyon.
+@login_required
+def cuzdanla_ode(request, saat_id):
+    saat = get_object_or_404(Musaitlik, id=saat_id)
+    danisan = get_object_or_404(Danisan, user=request.user)
+    ucret = saat.uzman.ucret
+    if danisan.bakiye >= ucret:
+        danisan.bakiye -= ucret
+        danisan.save()
+        Randevu.objects.create(danisan=danisan, uzman=saat.uzman, tarih=saat.gun, saat=saat.saat, alinan_ucret=ucret, durum='beklemede', odeme_alindi=True)
+        saat.dolu_mu = True
+        saat.save()
+        return redirect('profil_sayfasi')
+    return redirect('bakiye_yukle')
 
-Terapi sürecinde "Bilişsel Davranışçı Terapi" (BDT) ekolünü benimsiyorum. Düşünce, duygu ve davranış arasındaki döngüyü fark etmenizi ve bunu kendi başınıza yönetmenizi sağlıyorum. Ayrıca derin travma çalışmaları için uluslararası geçerliliğe sahip EMDR sertifikasına sahibim. Güvenli bir alanda, yargılanmadan dinlenmek isterseniz seanslarımıza katılabilirsiniz.""",
-                'alanlar': ['Anksiyete', 'Depresyon', 'İlişki Terapisi', 'EMDR'],
-                'yorumlar': random.sample(yorumlar_havuzu, 4)
-            },
-        ],
-        'fizyoterapi': [
-            {
-                'id': 'fzt-can',
-                'ad': 'Fzt. Can Yılmaz',
-                'resim': '👨‍⚕️',
-                'unvan': 'Manuel Terapist',
-                'puan': 4.8,
-                'danisan_sayisi': 750,
-                'deneyim': '7 Yıl',
-                'kisa_ozet': 'Bel, boyun fıtığı ve duruş bozuklukları.',
-                'uzun_bilgi': """Fizik tedavi sürecini sadece sıradan egzersizlerle değil, kişiye özel manuel terapi teknikleriyle destekliyorum. Özellikle masa başı çalışanlarda çok sık görülen boyun düzleşmesi, sırt ağrıları ve bel fıtığı konularında uzmanlaştım.
+# --- 6. ONAY / RED & İADE İŞLEMLERİ ---
+@login_required
+def randevu_onayla(request, randevu_id):
+    randevu = get_object_or_404(Randevu, id=randevu_id, uzman__user=request.user)
+    if randevu.durum == 'beklemede':
+        randevu.durum = 'onaylandi'
+        randevu.save()
+        uzman = randevu.uzman
+        uzman.bakiye += randevu.alinan_ucret
+        uzman.save()
+    return redirect('profil_sayfasi')
 
-Benim klinik yaklaşımımda amaç sadece geçici olarak ağrıyı dindirmek değil, ağrının gerçek kaynağını bulup tekrarlamasını engellemektir. Seanslarımız sonrasında size özel hazırladığım video destekli ev egzersiz programlarıyla iyileşme sürecinizi hızlandırıyoruz.""",
-                'alanlar': ['Bel Fıtığı', 'Boyun Ağrısı', 'Manuel Terapi', 'Duruş Bozukluğu'],
-                'yorumlar': random.sample(yorumlar_havuzu, 3)
-            },
-        ]
-    }
+@login_required
+def randevu_reddet(request, randevu_id):
+    randevu = get_object_or_404(Randevu, id=randevu_id, uzman__user=request.user)
+    if randevu.durum == 'beklemede':
+        danisan = randevu.danisan
+        danisan.bakiye += randevu.alinan_ucret
+        danisan.save()
+        randevu.durum = 'reddedildi'
+        randevu.save()
+        musaitlik = Musaitlik.objects.filter(uzman=randevu.uzman, gun=randevu.tarih, saat=randevu.saat).first()
+        if musaitlik:
+            musaitlik.dolu_mu = False
+            musaitlik.save()
+    return redirect('profil_sayfasi')
 
-    secilen_doktorlar = tum_doktorlar.get(bolum_adi, [])
-    context = {'bolum_adi': bolum_adi, 'baslik': basliklar.get(bolum_adi, 'Uzmanlar Listesi'),
-               'doktorlar': secilen_doktorlar}
-    return render(request, 'bolum.html', context)
+# --- 7. YORUM & PUANLAMA ---
+@login_required
+def yorum_ekle(request, uzman_id):
+    if request.method == "POST":
+        uzman = get_object_or_404(Uzman, id=uzman_id)
+        danisan = get_object_or_404(Danisan, user=request.user)
+        puan = request.POST.get('puan')
+        icerik = request.POST.get('icerik')
+        if puan and icerik:
+            Yorum.objects.create(uzman=uzman, danisan=danisan, puan=int(puan), icerik=icerik)
+        return redirect('bolum_detay', bolum_adi=uzman.brans)
+    return redirect('ana_sayfa')
 
+# --- 8. MESAJLAŞMA & CHAT ---
+@login_required
+def chat_odasi(request, oda_adi):
+    # Oda adı eşleşmesini sağlamak için küçük harfe çevirebilirsin ama standart 'oda_admin_kullanici' ise buna gerek yok
+    if request.method == "POST":
+        icerik = request.POST.get('mesaj')
+        if icerik:
+            # OKUNDU hatasını çözmek için Mesaj modeline alan eklediğini varsayıyoruz
+            Mesaj.objects.create(
+                oda=oda_adi,
+                gonderen=request.user.username,
+                icerik=icerik,
+                okundu=False
+            )
+        return redirect('chat_odasi', oda_adi=oda_adi)
 
-def odeme_sayfasi(request):
-    doktor_adi = request.GET.get('doktor', 'Uzman Doktor')
-    tarih = request.GET.get('tarih', 'Belirtilmedi')
-    saat = request.GET.get('saat', 'Belirtilmedi')
-    context = {'doktor_adi': doktor_adi, 'tarih': tarih, 'saat': saat, 'fiyat': '1.250 TL'}
-    return render(request, 'odeme.html', context)
+    # Odaya girince gelen mesajları okundu yapıyoruz
+    Mesaj.objects.filter(oda=oda_adi).exclude(gonderen=request.user.username).update(okundu=True)
 
+    mesajlar = Mesaj.objects.filter(oda=oda_adi).order_by('tarih')
+    return render(request, 'chat.html', {'mesajlar': mesajlar, 'oda_adi': oda_adi})
 
-def profil_sayfasi(request):
-    context = {
-        'kullanici': {'ad_soyad': 'Test Öğrencisi', 'email': 'ogrenci@test.com', 'telefon': '+90 555 123 45 67',
-                      'kayit_tarihi': 'Eylül 2025'},
-        'yaklasan_randevular': [
-            {'doktor': 'Uzm. Dyt. Ayşe Yılmaz', 'bolum': 'Klinik Beslenme', 'tarih': '25 Şubat 2026', 'saat': '14:00',
-             'durum': 'Onaylandı', 'durum_renk': '#27ae60'}],
-        'gecmis_randevular': [
-            {'doktor': 'Psk. Kemal Öztürk', 'bolum': 'Psikoterapist', 'tarih': '10 Ocak 2026', 'saat': '11:00',
-             'durum': 'Tamamlandı', 'durum_renk': '#3498db'}]
-    }
-    return render(request, 'profil.html', context)
-
+def logout(request):
+    auth_logout(request)
+    return redirect('giris_sayfasi')
 
 def danisan_sayfasi(request):
-    context = {
-        'uzman': {
-            'id': 'dyt-ayse',
-            'ad_soyad': 'Uzm. Dyt. Ayşe Yılmaz',
-            'unvan': 'Klinik Beslenme Uzmanı',
-            'puan': 4.9,
-            'bakiye': '14.500 TL',
-            'aylik_kazanc': '32.400 TL',
-            'toplam_danisan': 1240
-        },
-        'bekleyen_talepler': [
-            {'danisan_ad': 'Elif Koç', 'tarih': '22 Şubat 2026', 'saat': '11:00', 'hizmet': 'İlk Görüşme'},
-            {'danisan_ad': 'Canan B.', 'tarih': '22 Şubat 2026', 'saat': '15:30', 'hizmet': 'Kontrol Seansı'}
-        ],
-        'bugunku_randevular': [
-            {
-                'id': 'dyt-ayse', 'danisan_ad': 'Ahmet Demir', 'saat': '14:00',
-                'durum': 'Yaklaşıyor', 'durum_renk': '#f39c12',
-                'not': 'Kilo verme süreci, 2. seans. Kan tahlili yüklendi.'
-            },
-            {
-                'id': 'dyt-ayse', 'danisan_ad': 'Zeynep Kaya', 'saat': '16:30',
-                'durum': 'Onaylandı', 'durum_renk': '#27ae60', 'not': 'Diyabet ve beslenme listesi güncellemesi.'
-            }
-        ],
-        'son_yorumlar': [
-            {'danisan': 'Selin A.', 'puan': 5,
-             'yorum': 'Harika bir seanstı, motivasyonum çok arttı! Listeler hiç zorlamıyor.'},
-            {'danisan': 'Ahmet Y.', 'puan': 5, 'yorum': 'Güler yüzlü ve çok ilgili bir uzman. Teşekkürler.'}
-        ]
-    }
-    return render(request, 'danisan.html', context)
+    return render(request, 'danisan.html')
 
-
-@csrf_exempt
-def mesaj_gonder(request):
-    if request.method == 'POST':
-        oda = request.POST.get('oda')
-        yazi = request.POST.get('mesaj', '')
-        dosya = request.FILES.get('dosya')
-        gonderen = request.POST.get('gonderen', 'Kullanıcı')
-        if oda:
-            Mesaj.objects.create(oda=oda, gonderen=gonderen, icerik=yazi, dosya=dosya)
-            return JsonResponse({'durum': 'basarili'})
-    return JsonResponse({'durum': 'hata'})
-
-
-def mesajlari_getir(request):
-    oda = request.GET.get('oda')
-    if oda:
-        mesajlar = Mesaj.objects.filter(oda=oda).order_by('tarih')
-    else:
-        mesajlar = []
-
-    data = []
-    for m in mesajlar:
-        dosya_url = m.dosya.url if m.dosya else None
-        zaman = m.tarih.strftime("%H:%M")
-        data.append({'gonderen': m.gonderen, 'icerik': m.icerik, 'dosya_url': dosya_url,
-                     'dosya_adi': m.dosya.name.split('/')[-1] if m.dosya else 'Dosya', 'zaman': zaman})
-    return JsonResponse({'mesajlar': data})
+def odeme_sayfasi(request):
+    return render(request, 'odeme.html')
